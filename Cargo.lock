@@ -291,6 +291,7 @@ name = "chimitheque_types"
 version = "0.1.0"
 dependencies = [
  "chimitheque_traits",
+ "chimitheque_utils",
  "chrono",
  "email_address",
  "env_logger 0.10.2",
@@ -300,6 +301,16 @@ dependencies = [
  "serde",
  "serde_json",
  "url",
+]
+
+[[package]]
+name = "chimitheque_utils"
+version = "0.1.0"
+dependencies = [
+ "dyn-error",
+ "env_logger 0.10.2",
+ "log",
+ "regex",
 ]
 
 [[package]]
@@ -454,6 +465,12 @@ dependencies = [
  "quote",
  "syn",
 ]
+
+[[package]]
+name = "dyn-error"
+version = "0.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d6f6b5f5d2c0acca80ecde4f37e2449352b764ace27cf20d3af6392bd5f68e84"
 
 [[package]]
 name = "either"
