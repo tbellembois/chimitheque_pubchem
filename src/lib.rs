@@ -1,2 +1,2 @@
 pub mod pubchem;
-mod pubchem_compound;
+pub mod pubchem_compound;
