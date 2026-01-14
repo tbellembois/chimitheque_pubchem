@@ -10,6 +10,7 @@ use governor::{
 };
 use image::ImageFormat;
 use log::debug;
+use ureq::config::Config;
 use urlencoding::encode;
 
 use crate::pubchem_compound::{Autocomplete, PropertyTable, Record};
@@ -20,40 +21,34 @@ pub fn autocomplete(
 ) -> Result<Autocomplete, String> {
     let urlencoded_search = encode(search);
 
+    let query_url = format!(
+        "https://pubchem.ncbi.nlm.nih.gov/rest/autocomplete/compound/{urlencoded_search}/json"
+    );
+    debug!("query_url: {query_url}");
+
+    // Build TLS HTTP client.
+    let tls_config = ureq::tls::TlsConfig::builder()
+        .disable_verification(false)
+        .build();
+
+    // Build request config.
+    let config = Config::builder().tls_config(tls_config).build();
+
+    // Create client.
+    let http_client = config.new_agent();
+
     // Call NCBI REST API.
     debug!(">block_on");
     block_on(rate_limiter.until_ready());
     debug!("<block_on");
 
-    let resp = match reqwest::blocking::get(format!(
-        "https://pubchem.ncbi.nlm.nih.gov/rest/autocomplete/compound/{urlencoded_search}/json",
-    )) {
-        Ok(resp) => resp,
-        Err(e) => return Err(e.to_string()),
-    };
-
-    debug!("resp: {:#?}", resp);
-
-    // Check HTTP code.
-    if !resp.status().is_success() {
-        return Err(resp.status().to_string());
+    match http_client.get(query_url).call() {
+        Ok(mut response) => match response.body_mut().read_json::<Autocomplete>() {
+            Ok(autocomplete) => Ok(autocomplete),
+            Err(err) => Err(err.to_string()),
+        },
+        Err(err) => Err(err.to_string()),
     }
-
-    // Get response body.
-    let body_text = match resp.text() {
-        Ok(body_text) => body_text,
-        Err(e) => return Err(e.to_string()),
-    };
-
-    debug!("body_text: {:?}", body_text);
-
-    // Unmarshall into JSON.
-    let autocomplete: Autocomplete = match serde_json::from_str(&body_text.to_owned()) {
-        Ok(autocomplete) => autocomplete,
-        Err(e) => return Err(e.to_string()),
-    };
-
-    Ok(autocomplete)
 }
 
 pub fn get_product_by_name(
@@ -67,6 +62,17 @@ pub fn get_product_by_name(
     //
     // Get 2d image.
     //
+    // Build TLS HTTP client.
+    let tls_config = ureq::tls::TlsConfig::builder()
+        .disable_verification(false)
+        .build();
+
+    // Build request config.
+    let config = Config::builder().tls_config(tls_config).build();
+
+    // Create client.
+    let http_client = config.new_agent();
+
     // Call NCBI REST API for png.
     debug!(">block_on");
     block_on(rate_limiter.until_ready());
@@ -79,26 +85,16 @@ pub fn get_product_by_name(
     );
     debug!("query_url: {query_url}");
 
-    let resp = match reqwest::blocking::get(query_url) {
-        Ok(resp) => resp,
-        Err(e) => return Err(e.to_string()),
-    };
-
-    debug!("resp.status(): {}", resp.status());
-
-    // Check HTTP code.
-    if !resp.status().is_success() {
-        return Err(resp.status().to_string());
-    }
-
-    // Get response body.
-    let body_bytes = match resp.bytes() {
-        Ok(body_bytes) => body_bytes,
-        Err(e) => return Err(e.to_string()),
+    let bytes = match http_client.get(query_url).call() {
+        Ok(response) => match response.into_body().read_to_vec() {
+            Ok(bytes) => bytes,
+            Err(err) => return Err(err.to_string()),
+        },
+        Err(err) => return Err(err.to_string()),
     };
 
     // Create image.
-    let image = match image::load_from_memory_with_format(&body_bytes, image::ImageFormat::Png) {
+    let image = match image::load_from_memory_with_format(&bytes, image::ImageFormat::Png) {
         Ok(image) => image,
         Err(e) => return Err(e.to_string()),
     };
@@ -125,6 +121,17 @@ fn get_compound_cid(
 ) -> Result<Option<usize>, String> {
     let urlencoded_name = encode(name);
 
+    // Build TLS HTTP client.
+    let tls_config = ureq::tls::TlsConfig::builder()
+        .disable_verification(false)
+        .build();
+
+    // Build request config.
+    let config = Config::builder().tls_config(tls_config).build();
+
+    // Create client.
+    let http_client = config.new_agent();
+
     // Call NCBI REST API for JSON.
     debug!(">block_on");
     block_on(rate_limiter.until_ready());
@@ -136,28 +143,12 @@ fn get_compound_cid(
     );
     debug!("query_url: {query_url}");
 
-    let resp = match reqwest::blocking::get(query_url) {
-        Ok(resp) => resp,
-        Err(e) => return Err(e.to_string()),
-    };
-
-    debug!("resp.status(): {}", resp.status());
-
-    // Check HTTP code.
-    if !resp.status().is_success() {
-        return Err(resp.status().to_string());
-    }
-
-    // Get response body.
-    let body_text = match resp.text() {
-        Ok(body_text) => body_text,
-        Err(e) => return Err(e.to_string()),
-    };
-
-    // Unmarshall into JSON.
-    let property_table: PropertyTable = match serde_json::from_str(&body_text.to_owned()) {
-        Ok(property_table) => property_table,
-        Err(e) => return Err(e.to_string()),
+    let property_table = match http_client.get(query_url).call() {
+        Ok(mut response) => match response.body_mut().read_json::<PropertyTable>() {
+            Ok(property_table) => property_table,
+            Err(err) => return Err(err.to_string()),
+        },
+        Err(err) => return Err(err.to_string()),
     };
 
     // Extract compound cid.
@@ -188,6 +179,17 @@ pub fn get_raw_compound_by_name(
     //
     // Get detailed informations.
     //
+    // Build TLS HTTP client.
+    let tls_config = ureq::tls::TlsConfig::builder()
+        .disable_verification(false)
+        .build();
+
+    // Build request config.
+    let config = Config::builder().tls_config(tls_config).build();
+
+    // Create client.
+    let http_client = config.new_agent();
+
     // Call NCBI REST API for JSON.
     debug!(">block_on");
     block_on(rate_limiter.until_ready());
@@ -197,25 +199,13 @@ pub fn get_raw_compound_by_name(
         format!("https://pubchem.ncbi.nlm.nih.gov/rest/pug_view/data/compound/{compound_cid}/JSON");
     debug!("query_url: {query_url}");
 
-    let resp = match reqwest::blocking::get(query_url) {
-        Ok(resp) => resp,
-        Err(e) => return Err(e.to_string()),
-    };
-
-    debug!("resp.status(): {}", resp.status());
-
-    // Check HTTP code.
-    if !resp.status().is_success() {
-        return Err(resp.status().to_string());
+    match http_client.get(query_url).call() {
+        Ok(mut response) => match response.body_mut().read_to_string() {
+            Ok(body_text) => Ok(body_text),
+            Err(err) => Err(err.to_string()),
+        },
+        Err(err) => Err(err.to_string()),
     }
-
-    // Get response body.
-    let body_text = match resp.text() {
-        Ok(body_text) => body_text,
-        Err(e) => return Err(e.to_string()),
-    };
-
-    Ok(body_text)
 }
 
 // Get the compound from the parameter name as a Record struct.
