@@ -2,6 +2,21 @@
 name = "chimitheque_pubchem"
 version = "0.1.0"
 edition = "2024"
+authors = ["Thomas Bellembois <thomas.bellembois@proton.me>"]
+description = "PubChem connector for Chimithèque"
+license = "GPL-3.0"
+repository = "https://github.com/tbellembois/chimitheque_pubchem"
+homepage = "https://github.com/tbellembois/chimitheque_pubchem"
+readme = "README.md"
+categories = ["database", "science"]
+keywords = ["chemistry", "biology", "database", "management"]
+rust-version = "1.94.0"
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 base64 = "0.22.1"
