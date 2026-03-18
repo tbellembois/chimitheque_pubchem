@@ -1,5 +1,3 @@
-use std::io::Cursor;
-
 use base64::{Engine, engine::general_purpose};
 use chimitheque_types::pubchemproduct::PubchemProduct;
 use futures::executor::block_on;
@@ -10,15 +8,30 @@ use governor::{
 };
 use image::ImageFormat;
 use log::debug;
-use ureq::config::Config;
+use serde::{Deserialize, Serialize};
+use std::io::Cursor;
+use ureq::{config::Config, http::HeaderValue};
 use urlencoding::encode;
 
-use crate::pubchem_compound::{Autocomplete, PropertyTable, Record};
+// Autocomplete
+#[derive(Serialize, Deserialize, Debug)]
+pub struct AutocompleteTerm {
+    compound: Vec<String>,
+}
 
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Autocomplete {
+    total: usize,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    dictionary_terms: Option<AutocompleteTerm>,
+}
+
+// Returns the auto complete strings with the X-Throttling-Control response header.
 pub fn autocomplete(
     rate_limiter: &RateLimiter<NotKeyed, InMemoryState, clock::DefaultClock, NoOpMiddleware>,
     search: &str,
-) -> Result<Autocomplete, String> {
+) -> Result<(Autocomplete, String), String> {
     let urlencoded_search = encode(search);
 
     let query_url = format!(
@@ -44,20 +57,43 @@ pub fn autocomplete(
 
     match http_client.get(query_url).call() {
         Ok(mut response) => match response.body_mut().read_json::<Autocomplete>() {
-            Ok(autocomplete) => Ok(autocomplete),
+            Ok(autocomplete) => Ok((
+                autocomplete,
+                response
+                    .headers()
+                    .get("X-Throttling-Control")
+                    .unwrap_or(&HeaderValue::from_static(
+                        "X-Throttling-Control header not found",
+                    ))
+                    .to_str()
+                    .unwrap_or_default()
+                    .to_string(),
+            )),
             Err(err) => Err(err.to_string()),
         },
         Err(err) => Err(err.to_string()),
     }
 }
 
+// Returns the product as a string with the X-Throttling-Control response header.
 pub fn get_product_by_name(
     rate_limiter: &RateLimiter<NotKeyed, InMemoryState, clock::DefaultClock, NoOpMiddleware>,
     name: &str,
-) -> Result<Option<PubchemProduct>, String> {
-    let record = get_raw_compound_by_name(rate_limiter, name)?;
+) -> Result<(PubchemProduct, String), String> {
+    //
+    // Get compound CID.
+    //
+    let compound_cid = get_compound_cid(rate_limiter, name)?;
 
-    let mut product = PubchemProduct::from_pubchem(record);
+    //
+    // Get compound by CID as a raw JSON string.
+    //
+    let record = get_pubchem_json_compound_by_cid(rate_limiter, compound_cid)?;
+
+    //
+    // Parse JSON into a PubchemProduct.
+    //
+    let mut product = PubchemProduct::from_pubchem_json(record.as_str());
 
     //
     // Get 2d image.
@@ -85,11 +121,23 @@ pub fn get_product_by_name(
     );
     debug!("query_url: {query_url}");
 
-    let bytes = match http_client.get(query_url).call() {
-        Ok(response) => match response.into_body().read_to_vec() {
-            Ok(bytes) => bytes,
-            Err(err) => return Err(err.to_string()),
-        },
+    let response = match http_client.get(query_url).call() {
+        Ok(response) => response,
+        Err(err) => return Err(err.to_string()),
+    };
+
+    let header = response
+        .headers()
+        .get("X-Throttling-Control")
+        .unwrap_or(&HeaderValue::from_static(
+            "X-Throttling-Control header not found",
+        ))
+        .to_str()
+        .unwrap_or_default()
+        .to_string();
+
+    let bytes = match response.into_body().read_to_vec() {
+        Ok(bytes) => bytes,
         Err(err) => return Err(err.to_string()),
     };
 
@@ -107,18 +155,16 @@ pub fn get_product_by_name(
     let res_base64 = general_purpose::STANDARD.encode(&image_data);
 
     // Update the result.
-    if let Some(ref mut p) = product {
-        p.twodpicture = Some(res_base64)
-    }
+    product.twodpicture = Some(res_base64);
 
-    Ok(product)
+    Ok((product, header))
 }
 
 // Get the compound CID from the parameter name.
 fn get_compound_cid(
     rate_limiter: &RateLimiter<NotKeyed, InMemoryState, clock::DefaultClock, NoOpMiddleware>,
     name: &str,
-) -> Result<Option<usize>, String> {
+) -> Result<usize, String> {
     let urlencoded_name = encode(name);
 
     // Build TLS HTTP client.
@@ -139,43 +185,40 @@ fn get_compound_cid(
 
     // We need to query at least one property to get the CID. Choosing MolecularFormula.
     let query_url = format!(
-        "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/{urlencoded_name}/property/MolecularFormula/JSON"
+        "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/{urlencoded_name}/cids/TXT"
     );
     debug!("query_url: {query_url}");
 
-    let property_table = match http_client.get(query_url).call() {
-        Ok(mut response) => match response.body_mut().read_json::<PropertyTable>() {
-            Ok(property_table) => property_table,
+    let compound_cid = match http_client.get(query_url).call() {
+        Ok(mut response) => match response.body_mut().read_to_string() {
+            Ok(cid_str) => cid_str.trim().parse::<usize>().ok().unwrap_or_default(),
             Err(err) => return Err(err.to_string()),
         },
         Err(err) => return Err(err.to_string()),
     };
 
-    // Extract compound cid.
-    let compound_cid = match property_table.property_table.properties.first() {
-        Some(compound_cid) => compound_cid.cid,
-        None => return Err("can not find compound cid".to_string()),
-    };
+    // let property_table = match http_client.get(query_url).call() {
+    //     Ok(mut response) => match response.body_mut().read_json::<PropertyTable>() {
+    //         Ok(property_table) => property_table,
+    //         Err(err) => return Err(err.to_string()),
+    //     },
+    //     Err(err) => return Err(err.to_string()),
+    // };
 
-    Ok(Some(compound_cid))
+    // Extract compound cid.
+    // let compound_cid = match property_table.property_table.properties.first() {
+    //     Some(compound_cid) => compound_cid.cid,
+    //     None => return Err("can not find compound cid".to_string()),
+    // };
+
+    Ok(compound_cid)
 }
 
-// Get the compound from the parameter name as a raw json.
-pub fn get_raw_compound_by_name(
+// Get the compound by name from the pubchem API as a raw JSON string.
+fn get_pubchem_json_compound_by_cid(
     rate_limiter: &RateLimiter<NotKeyed, InMemoryState, clock::DefaultClock, NoOpMiddleware>,
-    name: &str,
+    cid: usize,
 ) -> Result<String, String> {
-    //
-    // Get compound CID.
-    //
-    let compound_cid = match get_compound_cid(rate_limiter, name) {
-        Ok(maybe_compound_cid) => match maybe_compound_cid {
-            Some(compound_cid) => compound_cid,
-            None => return Err(String::from("none compound cid")),
-        },
-        Err(e) => return Err(e.to_string()),
-    };
-
     //
     // Get detailed informations.
     //
@@ -195,8 +238,10 @@ pub fn get_raw_compound_by_name(
     block_on(rate_limiter.until_ready());
     debug!("<block_on");
 
+    // We use the PUG view API to get detailed informations.
+    // see https://pubchem.ncbi.nlm.nih.gov/docs/pug-view
     let query_url =
-        format!("https://pubchem.ncbi.nlm.nih.gov/rest/pug_view/data/compound/{compound_cid}/JSON");
+        format!("https://pubchem.ncbi.nlm.nih.gov/rest/pug_view/data/compound/{cid}/JSON");
     debug!("query_url: {query_url}");
 
     match http_client.get(query_url).call() {
@@ -208,157 +253,24 @@ pub fn get_raw_compound_by_name(
     }
 }
 
+// -> not used
 // Get the compound from the parameter name as a Record struct.
-pub fn get_compound_by_name(
-    rate_limiter: &RateLimiter<NotKeyed, InMemoryState, clock::DefaultClock, NoOpMiddleware>,
-    name: &str,
-) -> Result<Record, String> {
-    // Get raw JSON string.
-    let raw_compound = match get_raw_compound_by_name(rate_limiter, name) {
-        Ok(raw_compound) => raw_compound,
-        Err(e) => return Err(e.to_string()),
-    };
+// pub fn get_compound_by_name(
+//     rate_limiter: &RateLimiter<NotKeyed, InMemoryState, clock::DefaultClock, NoOpMiddleware>,
+//     name: &str,
+// ) -> Result<Record, String> {
+//     // Get raw JSON string.
+//     let raw_compound = get_raw_compound_by_name(rate_limiter, name)?;
 
-    // Unmarshall into JSON.
-    let record: Record = match serde_json::from_str(&raw_compound) {
-        Ok(record) => record,
-        Err(e) => return Err(e.to_string()),
-    };
+//     // Unmarshall into JSON.
+//     let record: Record = match serde_json::from_str(&raw_compound) {
+//         Ok(record) => record,
+//         Err(e) => return Err(e.to_string()),
+//     };
 
-    Ok(record)
-}
+//     Ok(record)
+// }
 
 #[cfg(test)]
-mod tests {
-
-    use std::{num::NonZeroU32, time::SystemTime};
-
-    use governor::{Quota, RateLimiter};
-    use log::info;
-    use std::time::Instant;
-
-    use super::*;
-
-    fn init_logger() {
-        let _ = env_logger::builder().is_test(true).try_init();
-    }
-
-    #[test]
-    fn test_autocomplete() {
-        init_logger();
-
-        let rate_limiter = RateLimiter::direct(Quota::per_second(NonZeroU32::new(5).unwrap()));
-
-        info!(
-            "aspirine: {:?}",
-            autocomplete(&rate_limiter, "aspirine").unwrap()
-        );
-        info!(
-            "DIACETYL-L-TARTARIC ANHYDRIDE: {:?}",
-            autocomplete(&rate_limiter, "DIACETYL-L-TARTARIC ANHYDRIDE").unwrap()
-        );
-        info!("#: {:?}", autocomplete(&rate_limiter, "#").unwrap());
-    }
-
-    #[test]
-    fn test_get_product_by_name() {
-        init_logger();
-
-        let rate_limiter = RateLimiter::direct(Quota::per_second(NonZeroU32::new(5).unwrap()));
-
-        let now = Instant::now();
-        info!(
-            "aspirine: {:#?}",
-            get_product_by_name(&rate_limiter, "aspirine")
-        );
-        let elapsed = now.elapsed();
-        info!("elapsed: {:.2?}", elapsed);
-
-        let now = Instant::now();
-        info!(
-            "D-Diacetyltartaric anhydride: {:#?}",
-            get_product_by_name(&rate_limiter, "D-Diacetyltartaric anhydride").unwrap()
-        );
-        let elapsed = now.elapsed();
-        info!("elapsed: {:.2?}", elapsed);
-
-        let now = Instant::now();
-        info!(
-            "(-)-Diacetyl-D-tartaric Anhydride: {:#?}",
-            get_product_by_name(&rate_limiter, "(-)-Diacetyl-D-tartaric Anhydride").unwrap()
-        );
-        let elapsed = now.elapsed();
-        info!("elapsed: {:.2?}", elapsed);
-
-        let now = Instant::now();
-        info!(
-            "(+)-Diacetyl-L-tartaric anhydride: {:#?}",
-            get_product_by_name(&rate_limiter, "(+)-Diacetyl-L-tartaric anhydride").unwrap()
-        );
-        let elapsed = now.elapsed();
-        info!("elapsed: {:.2?}", elapsed);
-    }
-
-    #[test]
-    fn test_get_compound_by_name() {
-        init_logger();
-
-        let rate_limiter = RateLimiter::direct(Quota::per_second(NonZeroU32::new(5).unwrap()));
-
-        info!(
-            "aspirine: {:#?}",
-            get_compound_by_name(&rate_limiter, "aspirine")
-        );
-        info!(
-            "D-Diacetyltartaric anhydride: {:#?}",
-            get_compound_by_name(&rate_limiter, "D-Diacetyltartaric anhydride").unwrap()
-        );
-        info!(
-            "(-)-Diacetyl-D-tartaric Anhydride: {:#?}",
-            get_compound_by_name(&rate_limiter, "(-)-Diacetyl-D-tartaric Anhydride").unwrap()
-        );
-        info!(
-            "(+)-Diacetyl-L-tartaric anhydride: {:#?}",
-            get_compound_by_name(&rate_limiter, "(+)-Diacetyl-L-tartaric anhydride").unwrap()
-        );
-    }
-
-    #[test]
-    fn test_get_compound_cid() {
-        init_logger();
-
-        let rate_limiter = RateLimiter::direct(Quota::per_second(NonZeroU32::new(5).unwrap()));
-
-        assert!(
-            get_compound_cid(&rate_limiter, "aspirine").is_ok_and(|x| x.is_some_and(|y| y > 0))
-        );
-        assert!(
-            get_compound_cid(&rate_limiter, "D-Diacetyltartaric anhydride")
-                .is_ok_and(|x| x.is_some_and(|y| y > 0))
-        );
-        assert!(
-            get_compound_cid(&rate_limiter, "(-)-Diacetyl-D-tartaric Anhydride")
-                .is_ok_and(|x| x.is_some_and(|y| y > 0))
-        );
-        assert!(
-            get_compound_cid(&rate_limiter, "(+)-Diacetyl-L-tartaric anhydride")
-                .is_ok_and(|x| x.is_some_and(|y| y > 0))
-        );
-        assert!(get_compound_cid(&rate_limiter, "abcdefghijklmopqrst").is_err());
-    }
-
-    #[test]
-    fn test_rate_limiter() {
-        init_logger();
-
-        let rate_limiter = RateLimiter::direct(Quota::per_second(NonZeroU32::new(1).unwrap()));
-
-        let before = SystemTime::now();
-        for i in 1..6 {
-            block_on(rate_limiter.until_ready());
-            debug!("loop {i}");
-        }
-        info!("{:?}", before.elapsed());
-        assert!(before.elapsed().unwrap().as_secs() >= 4);
-    }
-}
+#[path = "pubchem_tests.rs"]
+mod pubchem_tests;
