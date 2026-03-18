@@ -35,7 +35,7 @@ jobs:
 
       - name: remove Cargo.toml patch section
         run: |
-          sed -i '/\[patch.crates-io\]/,/^$/d' Cargo.toml
+          sed -i '/^\[patch\./,/^$/d' Cargo.toml
 
       - name: build
         run: cargo build --verbose
