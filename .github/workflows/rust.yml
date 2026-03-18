@@ -23,7 +23,7 @@ jobs:
           components: clippy
 
       # Cache dependencies
-      - name: Cache dependencies
+      - name: cache dependencies
         uses: actions/cache@v5
         with:
           path: |
@@ -32,6 +32,10 @@ jobs:
             target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.toml') }}
           restore-keys: ${{ runner.os }}-cargo-
+
+      - name: remove Cargo.toml patch section
+        run: |
+          sed -i '/\[patch.crates-io\]/,/^$/d' Cargo.toml
 
       - name: build
         run: cargo build --verbose
