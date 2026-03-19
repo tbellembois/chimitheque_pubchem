@@ -318,6 +318,7 @@ dependencies = [
 [[package]]
 name = "chimitheque_traits"
 version = "0.1.0"
+source = "git+https://github.com/tbellembois/chimitheque_traits.git?branch=main#56d86ebcd015b78233c0ecb2610d4f18b6e4c63f"
 
 [[package]]
 name = "chimitheque_types"
@@ -341,6 +342,7 @@ dependencies = [
 [[package]]
 name = "chimitheque_utils"
 version = "0.1.0"
+source = "git+https://github.com/tbellembois/chimitheque_utils.git?branch=main#7a8b89e406267d1ce0e4b858858a4c88a64ce8fc"
 dependencies = [
  "dyn-error",
  "env_logger 0.10.2",

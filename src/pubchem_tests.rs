@@ -4,7 +4,6 @@ mod tests {
     use futures::executor::block_on;
     use governor::{Quota, RateLimiter};
     use log::info;
-    use std::time::Instant;
     use std::{num::NonZeroU32, time::SystemTime};
 
     use crate::pubchem::{autocomplete, get_compound_cid, get_product_by_name};
@@ -36,62 +35,28 @@ mod tests {
 
         let rate_limiter = RateLimiter::direct(Quota::per_second(NonZeroU32::new(5).unwrap()));
 
-        let now = Instant::now();
-        info!(
-            "aspirine: {:#?}",
-            get_product_by_name(&rate_limiter, "aspirine")
-        );
-        let elapsed = now.elapsed();
-        info!("elapsed: {elapsed:.2?}");
+        assert!(get_product_by_name(&rate_limiter, "1,4-butanediol").is_ok());
+        assert!(get_product_by_name(&rate_limiter, "1,4-dioxane").is_ok());
+        assert!(get_product_by_name(&rate_limiter, "acetic acid").is_ok());
+        assert!(get_product_by_name(&rate_limiter, "acetone").is_ok());
+        assert!(get_product_by_name(&rate_limiter, "Aluminium oxide").is_ok());
+        assert!(get_product_by_name(&rate_limiter, "ammonium chloride").is_ok());
+        assert!(get_product_by_name(&rate_limiter, "cesium carbonate").is_ok());
+        assert!(get_product_by_name(&rate_limiter, "chloroform").is_ok());
+        assert!(get_product_by_name(&rate_limiter, "chlorotrimethylsilane").is_ok());
+        assert!(get_product_by_name(&rate_limiter, "cyclohexane").is_ok());
 
-        let now = Instant::now();
-        info!(
-            "D-Diacetyltartaric anhydride: {:#?}",
-            get_product_by_name(&rate_limiter, "D-Diacetyltartaric anhydride").unwrap()
-        );
-        let elapsed = now.elapsed();
-        info!("elapsed: {elapsed:.2?}");
-
-        let now = Instant::now();
-        info!(
-            "(-)-Diacetyl-D-tartaric Anhydride: {:#?}",
-            get_product_by_name(&rate_limiter, "(-)-Diacetyl-D-tartaric Anhydride").unwrap()
-        );
-        let elapsed = now.elapsed();
-        info!("elapsed: {elapsed:.2?}");
-
-        let now = Instant::now();
-        info!(
-            "(+)-Diacetyl-L-tartaric anhydride: {:#?}",
-            get_product_by_name(&rate_limiter, "(+)-Diacetyl-L-tartaric anhydride").unwrap()
-        );
-        let elapsed = now.elapsed();
-        info!("elapsed: {elapsed:.2?}");
+        assert!(get_product_by_name(&rate_limiter, "Xyl€Θöl-42").is_err());
+        assert!(get_product_by_name(&rate_limiter, "$uperN€ 컴퓨터트Delivery").is_err());
+        assert!(get_product_by_name(&rate_limiter, "Hēⓘ로는로로 encode.").is_err());
+        assert!(get_product_by_name(&rate_limiter, "Nϵith€rHērε≈Ξ").is_err());
+        assert!(get_product_by_name(&rate_limiter, "RαdiⱤX-!And@").is_err());
+        assert!(get_product_by_name(&rate_limiter, "QuΛntumΦυs!$").is_err());
+        assert!(get_product_by_name(&rate_limiter, "Kยรรย´ะย´ะs sufficeϗγ").is_err());
+        assert!(get_product_by_name(&rate_limiter, "Δ wherebyΞxploded").is_err());
+        assert!(get_product_by_name(&rate_limiter, "Сhusва® ey°").is_err());
+        assert!(get_product_by_name(&rate_limiter, "FractstrapΞΔMΞGA^2077").is_err());
     }
-
-    // #[test]
-    // fn test_get_compound_by_name() {
-    //     init_logger();
-
-    //     let rate_limiter = RateLimiter::direct(Quota::per_second(NonZeroU32::new(5).unwrap()));
-
-    //     info!(
-    //         "aspirine: {:#?}",
-    //         get_compound_by_name(&rate_limiter, "aspirine")
-    //     );
-    //     info!(
-    //         "D-Diacetyltartaric anhydride: {:#?}",
-    //         get_compound_by_name(&rate_limiter, "D-Diacetyltartaric anhydride").unwrap()
-    //     );
-    //     info!(
-    //         "(-)-Diacetyl-D-tartaric Anhydride: {:#?}",
-    //         get_compound_by_name(&rate_limiter, "(-)-Diacetyl-D-tartaric Anhydride").unwrap()
-    //     );
-    //     info!(
-    //         "(+)-Diacetyl-L-tartaric anhydride: {:#?}",
-    //         get_compound_by_name(&rate_limiter, "(+)-Diacetyl-L-tartaric anhydride").unwrap()
-    //     );
-    // }
 
     #[test]
     fn test_get_compound_cid() {
@@ -121,7 +86,7 @@ mod tests {
         let rate_limiter = RateLimiter::direct(Quota::per_second(NonZeroU32::new(1).unwrap()));
 
         let before = SystemTime::now();
-        for i in 1..6 {
+        for _i in 1..6 {
             block_on(rate_limiter.until_ready());
         }
         assert!(before.elapsed().unwrap().as_secs() >= 4);
