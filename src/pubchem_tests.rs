@@ -1,12 +1,17 @@
 #[cfg(test)]
 mod tests {
+    #![allow(
+        clippy::unwrap_used,
+        clippy::expect_used,
+        clippy::panic,
+        clippy::too_many_lines
+    )]
 
+    use crate::pubchem::{autocomplete, get_compound_cid, get_product_by_name};
     use futures::executor::block_on;
     use governor::{Quota, RateLimiter};
     use log::info;
     use std::{num::NonZeroU32, time::SystemTime};
-
-    use crate::pubchem::{autocomplete, get_compound_cid, get_product_by_name};
 
     fn init_logger() {
         let _ = env_logger::builder().is_test(true).try_init();
