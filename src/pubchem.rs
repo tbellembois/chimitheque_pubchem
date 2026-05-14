@@ -1,5 +1,5 @@
 use base64::{Engine, engine::general_purpose};
-use chimitheque_types::pubchemproduct::PubchemProduct;
+use chimitheque_types::{pubchem::Autocomplete, pubchemproduct::PubchemProduct};
 use futures::executor::block_on;
 use governor::{
     RateLimiter, clock,
@@ -8,24 +8,9 @@ use governor::{
 };
 use image::ImageFormat;
 use log::debug;
-use serde::{Deserialize, Serialize};
 use std::io::Cursor;
 use ureq::{config::Config, http::HeaderValue};
 use urlencoding::encode;
-
-// Autocomplete
-#[derive(Serialize, Deserialize, Debug)]
-pub struct AutocompleteTerm {
-    compound: Vec<String>,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct Autocomplete {
-    total: usize,
-
-    #[serde(skip_serializing_if = "Option::is_none")]
-    dictionary_terms: Option<AutocompleteTerm>,
-}
 
 // Returns the auto complete strings with the X-Throttling-Control response header.
 pub fn autocomplete(
