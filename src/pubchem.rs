@@ -9,7 +9,10 @@ use governor::{
 use image::ImageFormat;
 use log::debug;
 use std::io::Cursor;
-use ureq::{config::Config, http::HeaderValue};
+use ureq::{
+    config::{AutoHeaderValue, Config},
+    http::HeaderValue,
+};
 use urlencoding::encode;
 
 // Returns the auto complete strings with the X-Throttling-Control response header.
@@ -89,7 +92,10 @@ pub fn get_product_by_name(
         .build();
 
     // Build request config.
-    let config = Config::builder().tls_config(tls_config).build();
+    let config = Config::builder()
+        .tls_config(tls_config)
+        .accept_encoding(AutoHeaderValue::None)
+        .build();
 
     // Create client.
     let http_client = config.new_agent();

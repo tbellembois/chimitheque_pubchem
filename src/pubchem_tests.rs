@@ -40,6 +40,12 @@ mod tests {
 
         let rate_limiter = RateLimiter::direct(Quota::per_second(NonZeroU32::new(5).unwrap()));
 
+        dbg!(
+            get_product_by_name(&rate_limiter, "1,4-butanediol")
+                .err()
+                .unwrap()
+        );
+
         assert!(get_product_by_name(&rate_limiter, "1,4-butanediol").is_ok());
         assert!(get_product_by_name(&rate_limiter, "1,4-dioxane").is_ok());
         assert!(get_product_by_name(&rate_limiter, "acetic acid").is_ok());
