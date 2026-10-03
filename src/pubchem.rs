@@ -1,4 +1,4 @@
-use base64::{Engine, engine::general_purpose};
+use base64::{Engine as _, engine::general_purpose};
 use chimitheque_types::{pubchem::Autocomplete, pubchemproduct::PubchemProduct};
 use futures::executor::block_on;
 use governor::{

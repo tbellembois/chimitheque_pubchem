@@ -10,7 +10,7 @@ homepage = "https://github.com/tbellembois/chimitheque_pubchem"
 readme = "README.md"
 categories = ["database", "science"]
 keywords = ["chemistry", "biology", "database", "management"]
-rust-version = "1.94.1"
+rust-version = "1.85.1"
 
 [package.metadata.docs.rs]
 all-features = true
@@ -32,7 +32,7 @@ struct_excessive_bools = "allow"
 too_many_lines = "allow"
 
 [dependencies]
-base64 = { version = "0.22.1", default-features = false }
+base64 = { version = "0.23.1", default-features = false }
 env_logger = { version = "0.11.10", default-features = false }
 futures = { version = "0.3.32", default-features = false, features = ["executor"] }
 governor = { version = "0.10.4", default-features = false, features = ["std"] }
