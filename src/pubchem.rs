@@ -81,7 +81,8 @@ pub fn get_product_by_name(
     //
     // Parse JSON into a PubchemProduct.
     //
-    let mut product = PubchemProduct::from_pubchem_json(record.as_str());
+    let mut product =
+        PubchemProduct::from_pubchem_json(record.as_str()).map_err(|err| err.to_string())?;
 
     //
     // Get 2d image.
