@@ -10,7 +10,7 @@ homepage = "https://github.com/tbellembois/chimitheque_pubchem"
 readme = "README.md"
 categories = ["database", "science"]
 keywords = ["chemistry", "biology", "database", "management"]
-rust-version = "1.85.1"
+rust-version = "1.88.0"
 
 [package.metadata.docs.rs]
 all-features = true
