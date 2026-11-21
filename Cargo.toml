@@ -6,7 +6,6 @@ authors = ["Thomas Bellembois <thomas.bellembois@proton.me>"]
 description = "PubChem connector for Chimithèque"
 license = "GPL-3.0"
 repository = "https://github.com/tbellembois/chimitheque_pubchem"
-homepage = "https://github.com/tbellembois/chimitheque_pubchem"
 readme = "README.md"
 categories = ["database", "science"]
 keywords = ["chemistry", "biology", "database", "management"]
