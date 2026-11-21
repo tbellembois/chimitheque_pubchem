@@ -84,9 +84,10 @@ checksum = "4e7648175b45a9a48536d676f68d918270699102aa8dab5496df06904c914600"
 [[package]]
 name = "chimitheque_defines"
 version = "0.1.0"
-source = "git+https://github.com/tbellembois/chimitheque_defines.git?branch=main#3f0baad9d268544141e38ed555367f05cda44a64"
+source = "git+https://github.com/tbellembois/chimitheque_defines.git?branch=main#8ccef55eb691e412cacd9ca0a69bbb732b38a54d"
 dependencies = [
- "regex",
+ "lazy-regex",
+ "once_cell",
 ]
 
 [[package]]
@@ -130,7 +131,7 @@ dependencies = [
 [[package]]
 name = "chimitheque_utils"
 version = "0.1.0"
-source = "git+https://github.com/tbellembois/chimitheque_utils.git?branch=main#746b745952f1e7a91ed6906e0df6ac1234b1e1a3"
+source = "git+https://github.com/tbellembois/chimitheque_utils.git?branch=main#38167851ed71a83e6efe8f1d3255f94b220dcf1e"
 dependencies = [
  "chimitheque_defines",
  "env_logger",
@@ -585,6 +586,29 @@ dependencies = [
  "regex",
  "serde_json",
  "thiserror",
+]
+
+[[package]]
+name = "lazy-regex"
+version = "3.6.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f0a2cce8a22920a29fdcc8c9170aa5d29edd9fbcf8bea856e24c2cb1c2419f67"
+dependencies = [
+ "lazy-regex-proc_macros",
+ "once_cell",
+ "regex",
+]
+
+[[package]]
+name = "lazy-regex-proc_macros"
+version = "3.6.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6f1e4b1f1d8c71edb4ff2b2150ec4606445fd2ddf67ddc097655daf59286baa6"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "regex",
+ "syn 3.0.6",
 ]
 
 [[package]]
