@@ -30,7 +30,7 @@ jobs:
             ~/.cargo/registry/
             ~/.cargo/git/
             target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.toml') }}
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-cargo-
 
       - name: remove Cargo.toml patch section
@@ -44,7 +44,7 @@ jobs:
         run: cargo test --verbose
 
       - name: run clippy
-        run: cargo clippy -- -Wclippy::all -Wclippy::pedantic -Aclippy::missing_errors_doc -Aclippy::missing_panics_doc -Aclippy::too_many_lines -Aclippy::struct_excessive_bools
+        run: cargo clippy --all-targets -- -D warnings
 
       - name: run tarpaulin
         run: cargo +nightly tarpaulin --rustflags="-C opt-level=0" --verbose --all-features --workspace --timeout 120 --out xml
