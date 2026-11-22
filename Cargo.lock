@@ -84,10 +84,9 @@ checksum = "4e7648175b45a9a48536d676f68d918270699102aa8dab5496df06904c914600"
 [[package]]
 name = "chimitheque_defines"
 version = "0.1.0"
-source = "git+https://github.com/tbellembois/chimitheque_defines.git?branch=main#ff7fc2c985599183a0cb87bca7c2d4ef0a30ab4a"
+source = "git+https://github.com/tbellembois/chimitheque_defines.git?branch=main#302f4293ab2bb01bf9399f429dd5376757ca7b99"
 dependencies = [
  "lazy-regex",
- "once_cell",
 ]
 
 [[package]]
