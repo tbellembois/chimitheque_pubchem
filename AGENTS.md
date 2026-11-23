@@ -1,73 +1,10 @@
 # AGENTS.md - Chimithèque PubChem Library Agent Guide
 
-## Overview
+First read and follow the global instructions in the [`AGENTS.md`](../chimitheque/AGENTS.md) file.
 
-This `rust` crate is the PubChem connector of a chemical products, biological reagents and laboratory consumables management application.\
+This `rust` crate is the PubChem connector of the [`Chimithèque`](https://github.com/chimitheque/gochimitheque) application.\
 
-- Check Cargo.toml to understand the project dependencies.
-- It queries the PubChem online database to autocomplete product names and to get a product by name. The PubChem JSON is parsed into chimitheque_types types, which hold the parsing and validation.
-
-Before implementing new functionality, inspect existing types and their tests to understand the project's conventions and patterns.
-
-## General instructions
-
-- Prefer simple, readable, and maintainable code over premature optimization or unnecessary features.
-- Follow existing project conventions and code organization.
-- Avoid unnecessary abstractions, dependencies, and code duplication.
-- Do not modify unrelated code.
-- Preserve existing public APIs unless the task explicitly requires changing them.
-- Do not introduce breaking changes without explicit authorization.
-- Do not assume requirements that are not specified. Ask for clarification when necessary.
-
-## Rust specific guidelines
-
-- Follow idiomatic Rust conventions.
-- Use appropriate Rust types and avoid unnecessary allocations and cloning.
-- Handle errors explicitly.
-- Avoid unwrap() and expect() in production code unless there is a clear justification.
-- Prefer existing dependencies over introducing new ones.
-- Document public types, traits, and functions.
-- Add comments for complex or non-obvious logic rather than commenting every line.
-- Follow the existing serialization and deserialization conventions.
-- Keep implementations consistent with similar types already present in the crate.
-- Do not define shared data (regular expressions, code lists, reference data, HTTP header names) as constants or statics in this crate: add it to the chimitheque_defines crate and import it from there. Runtime state (caches, counters, `Once` guards) and settings specific to this crate (e.g. user interface styles) stay in the crate.
-
-## Testing
-
-- Tests are in pubchem_tests.rs.
-- Update existing tests when modifying a type.
-- Add unit tests for new functionality and relevant edge cases.
-- Test serialization and deserialization when applicable.
-- Run the relevant tests after making changes.
-- Run the complete test suite before considering a task finished.
-
-Recommended validation commands:
-
-- cargo test
-- cargo fmt --check
-- cargo clippy
-
-Report any tests or validation commands that could not be executed
-
-## RTK Instructions
-
-When executing terminal commands, prefer RTK to reduce unnecessary command output and token consumption.
-
-Use RTK equivalents whenever available.
-
-Examples:
-
-- git status -> rtk git status
-- git diff -> rtk git diff
-- git log -> rtk git log
-- ls -> rtk ls
-- grep -> rtk grep
-- cargo test -> rtk cargo test
-- npm test -> rtk npm test
-
-For commands not supported by RTK, execute them normally.
-
-Do not sacrifice important diagnostic information.
+It queries the PubChem online database to autocomplete product names and to get a product by name. The PubChem JSON is parsed into a `chimitheque_types::Product` type, which hold the parsing and validation.
 
 ## File protection
 
