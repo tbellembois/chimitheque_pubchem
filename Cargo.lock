@@ -84,7 +84,7 @@ checksum = "4e7648175b45a9a48536d676f68d918270699102aa8dab5496df06904c914600"
 [[package]]
 name = "chimitheque_defines"
 version = "0.1.0"
-source = "git+https://github.com/tbellembois/chimitheque_defines.git?branch=main#5e5471b7ba636fa8c4adb07a1a0ea2aa4d869d1d"
+source = "git+https://github.com/tbellembois/chimitheque_defines.git?branch=main#d304cf2ac2d58c684a07d139ddde27871c6d7807"
 dependencies = [
  "lazy-regex",
 ]
@@ -130,7 +130,7 @@ dependencies = [
 [[package]]
 name = "chimitheque_utils"
 version = "0.1.0"
-source = "git+https://github.com/tbellembois/chimitheque_utils.git?branch=main#35b16544b695e233c56c43ec5fc8b969f7f83d22"
+source = "git+https://github.com/tbellembois/chimitheque_utils.git?branch=main#42947bf9c1f97871b0535322d054dd4638c544da"
 dependencies = [
  "chimitheque_defines",
  "log",
