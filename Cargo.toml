@@ -45,3 +45,6 @@ chimitheque_types = { git = "https://github.com/tbellembois/chimitheque_types.gi
 
 [patch."https://github.com/tbellembois/chimitheque_types.git"]
 chimitheque_types = { path = "../chimitheque_types" }
+
+[patch."https://github.com/tbellembois/chimitheque_utils.git"]
+chimitheque_utils = { path = "../chimitheque_utils" }

@@ -130,7 +130,6 @@ dependencies = [
 [[package]]
 name = "chimitheque_utils"
 version = "0.1.0"
-source = "git+https://github.com/tbellembois/chimitheque_utils.git?branch=main#42947bf9c1f97871b0535322d054dd4638c544da"
 dependencies = [
  "chimitheque_defines",
  "log",
